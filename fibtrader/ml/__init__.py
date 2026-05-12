@@ -4,6 +4,7 @@ from .splits import EmbargoedWalkForward, DailyRollingWalkForward
 from .train import train_xgb_walkforward, train_xgb_rolling, TrainResult
 from .explain import shap_importance
 from .notebook import build_failure_notebook, cluster_failures
+from .insight import generate_failure_insights
 
 __all__ = [
     "triple_barrier_labels",
@@ -17,4 +18,5 @@ __all__ = [
     "shap_importance",
     "build_failure_notebook",
     "cluster_failures",
+    "generate_failure_insights",
 ]

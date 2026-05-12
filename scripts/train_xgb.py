@@ -28,6 +28,7 @@ from fibtrader.ml import (
     build_dataset,
     build_failure_notebook,
     cluster_failures,
+    generate_failure_insights,
     shap_importance,
     train_xgb_rolling,
     train_xgb_walkforward,
@@ -63,6 +64,10 @@ def main():
                     help="path to save the per-row failure notebook CSV")
     ap.add_argument("--cluster-failures", type=int, default=0,
                     help="cluster FP rows into K groups (0 = off)")
+    ap.add_argument("--insight-out", default=None,
+                    help="path to save the failure-insight text report")
+    ap.add_argument("--insight-class", default="FP",
+                    help="mistake class to analyze (FP, FN)")
     args = ap.parse_args()
 
     cfg = BotConfig(
@@ -140,6 +145,7 @@ def main():
     result.final_model.save_model(args.model_out)
     print(f"Saved model -> {args.model_out}")
 
+    notebook_df = None
     if args.notebook_out:
         nb = build_failure_notebook(
             feat,
@@ -168,6 +174,19 @@ def main():
                 )
                 print("FP clusters (by forward_return):")
                 print(cluster_summary)
+        notebook_df = nb
+
+    if args.insight_out and notebook_df is not None:
+        insight = generate_failure_insights(
+            notebook_df, failure_class=args.insight_class, top_k=15
+        )
+        with open(args.insight_out, "w") as fh:
+            fh.write(insight["report"])
+        summary_csv = args.insight_out.rsplit(".", 1)[0] + "_summary.csv"
+        insight["summary"].to_csv(summary_csv, index=False)
+        print(f"Wrote insight report -> {args.insight_out}")
+        print(f"Wrote insight summary table -> {summary_csv}")
+        print(insight["report"])
 
 
 if __name__ == "__main__":

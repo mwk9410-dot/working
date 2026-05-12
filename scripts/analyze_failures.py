@@ -20,6 +20,7 @@ from fibtrader.ml import (
     build_dataset,
     build_failure_notebook,
     cluster_failures,
+    generate_failure_insights,
     triple_barrier_labels,
 )
 
@@ -36,6 +37,8 @@ def main():
     ap.add_argument("--slippage-bps", type=float, default=5.0)
     ap.add_argument("--notebook-out", required=True)
     ap.add_argument("--cluster", type=int, default=0)
+    ap.add_argument("--insight-out", default=None)
+    ap.add_argument("--insight-class", default="FP")
     args = ap.parse_args()
 
     import xgboost as xgb
@@ -71,6 +74,13 @@ def main():
     nb.to_csv(args.notebook_out)
     print(f"Wrote -> {args.notebook_out}")
     print(nb.groupby("mistake_type").size().to_dict())
+
+    if args.insight_out:
+        insight = generate_failure_insights(nb, failure_class=args.insight_class, top_k=15)
+        with open(args.insight_out, "w") as fh:
+            fh.write(insight["report"])
+        print(f"Wrote insight -> {args.insight_out}")
+        print(insight["report"])
 
 
 if __name__ == "__main__":
