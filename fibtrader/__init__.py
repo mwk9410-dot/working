@@ -5,6 +5,7 @@ from .features import add_features
 from .backtest import backtest_fib_confluence
 from .stats import summarize_trades, permutation_test_random_ratios
 from .signal import LiveSignalGenerator
+from .pipeline import prepare_features
 
 __all__ = [
     "BotConfig",
@@ -16,6 +17,7 @@ __all__ = [
     "summarize_trades",
     "permutation_test_random_ratios",
     "LiveSignalGenerator",
+    "prepare_features",
 ]
 
 # Subpackages are imported lazily — they pull heavy deps (xgboost, shap).

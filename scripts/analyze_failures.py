@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
 
-from fibtrader import BotConfig, add_features, attach_recent_swing_and_fib, zigzag_confirmed
+from fibtrader import BotConfig, prepare_features
 from fibtrader.data import load_ohlcv_csv
 from fibtrader.ml import (
     build_dataset,
@@ -50,9 +50,7 @@ def main():
         slippage_bps=args.slippage_bps,
     )
     df = load_ohlcv_csv(args.csv)
-    sw = zigzag_confirmed(df, pct=cfg.zigzag_pct, confirm_bars=cfg.confirm_bars)
-    sw = attach_recent_swing_and_fib(sw, ratios=cfg.fib_ratios)
-    feat = add_features(sw, cfg)
+    feat = prepare_features(df, cfg)
     feat = triple_barrier_labels(feat, cfg)
     X, y, _ = build_dataset(feat)
 

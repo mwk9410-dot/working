@@ -6,13 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from fibtrader import (
-    BotConfig,
-    add_features,
-    attach_recent_swing_and_fib,
-    backtest_fib_confluence,
-    zigzag_confirmed,
-)
+from fibtrader import BotConfig, backtest_fib_confluence, prepare_features
 from fibtrader.data import load_ohlcv_csv
 
 
@@ -36,9 +30,7 @@ def main():
     )
 
     df = load_ohlcv_csv(args.csv)
-    sw = zigzag_confirmed(df, pct=cfg.zigzag_pct, confirm_bars=cfg.confirm_bars)
-    sw = attach_recent_swing_and_fib(sw, ratios=cfg.fib_ratios)
-    feat = add_features(sw, cfg)
+    feat = prepare_features(df, cfg)
     trades, stats = backtest_fib_confluence(feat, cfg)
 
     print(json.dumps(stats, indent=2, default=str))

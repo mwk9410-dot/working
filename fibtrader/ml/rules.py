@@ -202,20 +202,30 @@ def apply_rules(
     only_enabled: bool = True,
 ) -> pd.Series:
     """
-    Return a boolean Series — True means "blocked by at least one rule".
-    Disabled rules are ignored when only_enabled=True (default).
-    Use ~blocked as the entry mask to forbid those rows.
+    Return a boolean Series — True 면 "최소 한 규칙에 의해 차단".
+    only_enabled=True (기본) 면 disabled 규칙은 무시.
+    ~blocked 를 entry mask 로 쓰면 됨.
+
+    내부 구현: 활성 규칙 표현식을 단일 eval 로 합쳐 한 번에 평가 — 큰
+    DataFrame (수백만 행) 에서 규칙 N개일 때 N→1 스캔으로 줄어든다.
+    표현식 하나라도 실패하면 그 규칙만 빼고 나머지를 fallback 으로 평가.
     """
-    blocked = pd.Series(False, index=df.index)
-    for r in rules:
-        if only_enabled and not r.enabled:
-            continue
-        try:
-            mask = df.eval(r.py_expr)
-        except Exception:
-            continue
-        blocked = blocked | mask.fillna(False).astype(bool)
-    return blocked
+    active = [r for r in rules if (not only_enabled or r.enabled)]
+    if not active:
+        return pd.Series(False, index=df.index)
+    try:
+        combined = " or ".join(f"({r.py_expr})" for r in active)
+        mask = df.eval(combined)
+        return mask.fillna(False).astype(bool)
+    except Exception:
+        blocked = pd.Series(False, index=df.index)
+        for r in active:
+            try:
+                m = df.eval(r.py_expr)
+            except Exception:
+                continue
+            blocked = blocked | m.fillna(False).astype(bool)
+        return blocked
 
 
 # -- Rule registry / removal recommendation -----------------------------

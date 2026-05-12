@@ -20,6 +20,8 @@ from typing import Iterable, List, Optional
 import numpy as np
 import pandas as pd
 
+from ..stats import _cohens_d
+
 DEFAULT_FEATURES = [
     "rsi", "atr_pct", "macd_hist", "vol_z",
     "confluence_count", "retracement_depth", "nearest_fib_dist",
@@ -40,16 +42,6 @@ class FeatureInsight:
     p_value: float
     p_value_corrected: float
     direction: str     # "↑ in FP" | "↓ in FP" | "shift"
-
-
-def _cohens_d(a: np.ndarray, b: np.ndarray) -> float:
-    if len(a) < 2 or len(b) < 2:
-        return float("nan")
-    sa, sb = a.std(ddof=1), b.std(ddof=1)
-    sp = np.sqrt(((len(a) - 1) * sa**2 + (len(b) - 1) * sb**2) / (len(a) + len(b) - 2))
-    if sp == 0:
-        return float("nan")
-    return (a.mean() - b.mean()) / sp
 
 
 def _welch_t(a: np.ndarray, b: np.ndarray) -> tuple[float, float]:

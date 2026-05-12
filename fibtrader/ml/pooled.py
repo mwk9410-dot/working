@@ -8,49 +8,59 @@
 
 각 행에는 출처 'Ticker' 컬럼이 붙어 사후 분석(어떤 종목이 손실에 기여했는지)
 이 가능하다.
+
+종목별 파이프라인은 독립이므로 multiprocessing 으로 병렬화. 6500종목 같은
+대규모 corpus 에서 wall-clock 시간이 코어 수에 비례해 줄어든다.
 """
 from __future__ import annotations
 
-from typing import Dict, Optional
+from multiprocessing import Pool
+from typing import Dict, Optional, Tuple
 
+import numpy as np
 import pandas as pd
 
 from ..config import BotConfig
-from ..features import add_features
-from ..fib import attach_recent_swing_and_fib
-from ..swing import zigzag_confirmed
+from ..pipeline import prepare_features
 from .labels import triple_barrier_labels
+
+
+def _process_one(args: Tuple[str, pd.DataFrame, BotConfig]) -> Optional[pd.DataFrame]:
+    ticker, df, cfg = args
+    if df is None or df.empty or "Date" not in df.columns:
+        return None
+    try:
+        feat = prepare_features(df, cfg)
+        feat = triple_barrier_labels(feat, cfg)
+        feat["Ticker"] = ticker
+        return feat
+    except Exception:
+        return None
 
 
 def build_pooled_frame(
     corpus: Dict[str, pd.DataFrame],
     cfg: BotConfig,
+    n_workers: int = 1,
+    downcast_float: bool = True,
     verbose: bool = False,
 ) -> pd.DataFrame:
     """
     corpus: ticker -> OHLCV DataFrame (Date 컬럼 필수)
+    n_workers: 1 이면 직렬, 2 이상이면 multiprocessing.Pool
+    downcast_float: True 면 합친 뒤 float64 → float32 다운캐스트 (메모리 절반)
     반환: 모든 종목을 시간순으로 정렬한 단일 feature+label DataFrame.
           'Ticker' 컬럼이 추가된다.
     """
-    frames = []
-    skipped = 0
-    for ticker, df in corpus.items():
-        if df is None or df.empty or "Date" not in df.columns:
-            skipped += 1
-            continue
-        try:
-            sw = zigzag_confirmed(df, pct=cfg.zigzag_pct, confirm_bars=cfg.confirm_bars)
-            sw = attach_recent_swing_and_fib(sw, ratios=cfg.fib_ratios)
-            feat = add_features(sw, cfg)
-            feat = triple_barrier_labels(feat, cfg)
-            feat["Ticker"] = ticker
-            frames.append(feat)
-            if verbose:
-                print(f"  {ticker}: {len(feat)} rows, labeled={feat['label'].notna().sum()}")
-        except Exception as e:
-            skipped += 1
-            if verbose:
-                print(f"  {ticker}: skipped ({e})")
+    pool_input = [(tk, df, cfg) for tk, df in corpus.items()]
+    if n_workers <= 1:
+        results = [_process_one(args) for args in pool_input]
+    else:
+        with Pool(n_workers) as p:
+            results = p.map(_process_one, pool_input)
+
+    frames = [r for r in results if r is not None and not r.empty]
+    skipped = len(pool_input) - len(frames)
 
     if not frames:
         return pd.DataFrame()
@@ -58,8 +68,14 @@ def build_pooled_frame(
     pooled = pd.concat(frames, ignore_index=True)
     # walk-forward 가 시간 순서를 따라가도록 정렬 (같은 날짜는 ticker 기준 안정 정렬)
     pooled = pooled.sort_values(["Date", "Ticker"], kind="mergesort").reset_index(drop=True)
+
+    if downcast_float:
+        float_cols = pooled.select_dtypes(include=["float64"]).columns
+        pooled[float_cols] = pooled[float_cols].astype(np.float32)
+
     if verbose:
+        mem_mb = pooled.memory_usage(deep=True).sum() / 1024**2
         print(f"풀드 결과: 종목 {len(frames)}개, 행 {len(pooled):,}개, "
               f"라벨 {int(pooled['label'].notna().sum()):,}개, "
-              f"스킵 {skipped}")
+              f"스킵 {skipped}, 메모리 {mem_mb:.1f}MB")
     return pooled

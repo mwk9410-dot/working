@@ -81,6 +81,8 @@ def main():
     ap.add_argument("--notebook-out", default=None)
     ap.add_argument("--insight-out", default=None)
     ap.add_argument("--cluster-failures", type=int, default=0)
+    ap.add_argument("--workers", type=int, default=1,
+                    help="풀드 빌드 병렬 워커 수. 6500종목이면 8~16 권장")
 
     args = ap.parse_args()
 
@@ -104,8 +106,8 @@ def main():
         slippage_bps=args.slippage_bps,
     )
 
-    print("\n=== 2) 모든 종목 파이프라인 → 풀드 frame 생성 ===")
-    pooled = build_pooled_frame(corpus, cfg, verbose=False)
+    print(f"\n=== 2) 모든 종목 파이프라인 → 풀드 frame 생성 (workers={args.workers}) ===")
+    pooled = build_pooled_frame(corpus, cfg, n_workers=args.workers, verbose=True)
     if pooled.empty:
         print("풀드 결과가 비어 있음. 종료.")
         return

@@ -10,6 +10,8 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
+from ..indicators import atr as _atr
+
 
 @dataclass
 class TickerStats:
@@ -25,17 +27,7 @@ class TickerStats:
 def _median_atr_pct(df: pd.DataFrame, n: int = 14) -> float:
     if len(df) < n + 1:
         return float("nan")
-    prev_close = df["Close"].shift(1)
-    tr = pd.concat(
-        [
-            df["High"] - df["Low"],
-            (df["High"] - prev_close).abs(),
-            (df["Low"] - prev_close).abs(),
-        ],
-        axis=1,
-    ).max(axis=1)
-    atr = tr.rolling(n).mean()
-    return float((atr / df["Close"]).median())
+    return float((_atr(df, n) / df["Close"]).median())
 
 
 def compute_ticker_stats(corpus: Dict[str, pd.DataFrame]) -> pd.DataFrame:

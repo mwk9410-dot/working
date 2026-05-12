@@ -21,9 +21,7 @@ import pandas as pd
 
 from ..backtest import backtest_fib_confluence
 from ..config import BotConfig
-from ..features import add_features
-from ..fib import attach_recent_swing_and_fib
-from ..swing import zigzag_confirmed
+from ..pipeline import prepare_features
 from .stats import compute_ticker_stats
 
 
@@ -58,9 +56,7 @@ class FilterSpec:
 def _backtest_one(args) -> Optional[Dict[str, float]]:
     ticker, df, cfg = args
     try:
-        sw = zigzag_confirmed(df, pct=cfg.zigzag_pct, confirm_bars=cfg.confirm_bars)
-        sw = attach_recent_swing_and_fib(sw, ratios=cfg.fib_ratios)
-        feat = add_features(sw, cfg)
+        feat = prepare_features(df, cfg)
         trades, stats = backtest_fib_confluence(feat, cfg)
         if stats is None:
             return None
