@@ -54,6 +54,43 @@ python scripts/train_xgb.py path/to/ohlcv.csv \
 기본 비용은 한국 리테일의 미국주식 매매 (∼25bps/측)에 맞춰져 있습니다.
 미국 리테일 $0 commission 환경이면 `--fee-bps 0`.
 
+### Rolling daily walk-forward (D 학습 → D+gap 검증)
+
+매 bar마다 학습-예측을 전진시키는 모드. `--refit-every`로 재학습 비용을 조절
+하되, 예측은 매 bar 생성. `embargo`는 보통 `hold_bars` 이상.
+
+```bash
+python scripts/train_xgb.py ohlcv.csv --rolling \
+    --rolling-min-train 252 --rolling-step 1 --refit-every 5 \
+    --notebook-out notebook.csv --cluster-failures 5
+```
+
+- `step=1` + `refit-every=1`: 진성 daily refit (느림)
+- `step=1` + `refit-every=5`: 주 1회 retrain, 매일 예측 (권장)
+- `step=5` + `refit-every=20`: 빠른 1차 검증용
+
+### 오답노트 (failure notebook)
+
+`--notebook-out`을 켜면 OOS 결정마다 다음을 기록한 CSV가 생성됩니다.
+
+| 컬럼 | 의미 |
+|---|---|
+| `mistake_type` | TP / FP / FN / TN |
+| `oof_proba`, `oof_pred`, `label` | 예측 확률·결정·실제 |
+| `forward_return`, `barrier_touched` | 실제 결과 (stop/take/time) |
+| `top_pos_features` | 그 행에서 확률을 ↑ 시킨 SHAP 상위 5개 |
+| `top_neg_features` | 그 행에서 확률을 ↓ 시킨 SHAP 상위 5개 |
+| `rsi`, `atr_pct`, `trend_up`, `confluence_count`, `nearest_fib_level` 등 | 시장 context |
+| `cluster_id` | (`--cluster-failures K` 시) FP를 K개 그룹으로 KMeans 클러스터링 |
+
+이미 학습된 모델/OOS가 있으면 다시 학습하지 않고 분석만:
+
+```bash
+python scripts/analyze_failures.py ohlcv.csv \
+    --model model.json --oof oof.csv \
+    --notebook-out notebook.csv --cluster 5
+```
+
 ### Massive.io alt-data 통합
 
 ```bash

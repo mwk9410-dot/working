@@ -1,14 +1,13 @@
 """
-Embargoed walk-forward splitter.
+Embargoed walk-forward splitters.
 
-For overlapping forward labels (triple-barrier with hold_bars > 1) we must
-exclude the `embargo` bars immediately following each test window from the
-training set in subsequent folds. Here we use a simpler but valid form: drop
-the embargo bars at the BOUNDARY between train and test in every fold.
+`EmbargoedWalkForward`: K chunked folds with an embargo gap. Fast, suitable
+for first-pass OOS estimates.
 
-Use the `gap` to also leave an embargo BEFORE the test (preventing the
-training set from including bars whose forward window overlaps the test
-start).
+`DailyRollingWalkForward`: bar-by-bar rolling validation. For each test point
+t in [min_train, n), the training window is [0, t - embargo) and the test
+window is a single bar at t (or a small slice if `test_window > 1`). This
+matches the "train at D, validate at D+gap" pattern where `gap == embargo`.
 """
 from __future__ import annotations
 
@@ -38,3 +37,32 @@ class EmbargoedWalkForward:
             if len(train_idx) == 0 or len(test_idx) == 0:
                 continue
             yield train_idx, test_idx
+
+
+@dataclass
+class DailyRollingWalkForward:
+    """
+    Bar-by-bar rolling walk-forward.
+
+    Each fold yields:
+        train_idx = [0, t - embargo)
+        test_idx  = [t, t + test_window)
+
+    Defaults: step=1 (advance one bar per fold), test_window=1 (one bar per fold).
+    For daily data with hold_bars=20, set embargo>=20 to prevent label leakage.
+    """
+    min_train: int = 252
+    embargo: int = 20
+    step: int = 1
+    test_window: int = 1
+
+    def split(self, n_rows: int) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
+        t = self.min_train
+        while t + self.test_window <= n_rows:
+            train_end = max(0, t - self.embargo)
+            if train_end <= 0:
+                t += self.step
+                continue
+            yield np.arange(0, train_end), np.arange(t, t + self.test_window)
+            t += self.step
+
