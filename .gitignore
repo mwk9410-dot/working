@@ -10,6 +10,7 @@ venv/
 # 환경별 설정 (사용자 로컬 경로)
 .env
 .env.local
+.claude/settings.local.json
 
 # 데이터 / 학습 산출물 폴더 — 절대 커밋 금지
 data/
