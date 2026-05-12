@@ -91,6 +91,49 @@ python scripts/analyze_failures.py ohlcv.csv \
     --notebook-out notebook.csv --cluster 5
 ```
 
+### 인사이트 자동 추출
+
+```bash
+python scripts/train_xgb.py ohlcv.csv --rolling \
+    --notebook-out notebook.csv --insight-out insight.txt
+```
+
+`generate_failure_insights`가 FP vs TP/TN을 각 feature별로 비교 (Welch's t /
+two-proportion z / chi-squared), Holm-Bonferroni 보정 후 텍스트 리포트 생성.
+
+### 규칙 제안기 (human-in-the-loop)
+
+오답노트에서 단순한 진입 차단 규칙을 자동 제안 (DecisionTree depth≤2). 모든
+후보는 `enabled=false`로 저장 — 사람이 명시적으로 켜기 전까지 적용 안 됨.
+
+```bash
+python scripts/propose_rules.py notebook.csv --max-depth 2 --min-fp 5 \
+    --min-ratio 2.0 --out rules_candidates.json
+# 검토 후 enabled: true 로 수정
+```
+
+규칙 활용:
+```python
+from fibtrader.ml import load_rules, apply_rules
+rules = load_rules("rules_v1.json")
+blocked = apply_rules(feat_df, rules)
+entries = signal_mask & ~blocked
+```
+
+규칙 자동 제거는 `update_registry` + `recommend_removals` — 누적 FP/TP 비율이
+낮아지거나 연속해서 안 걸리면 retire 후보로 플래그.
+
+### Universe sensitivity sweep
+
+```bash
+python scripts/universe_sweep.py --dir /path/to/csv_dir/ \
+    --metric sharpe_like --workers 8 \
+    --sweep-out sweep.csv --backtest-out bt.csv
+```
+
+필터 한 dimension씩 변화 → `(threshold, n_tickers, 성과 분포)` 곡선 출력.
+전체 grid 동시 최적화는 의도적으로 제외 (meta-overfitting 위험).
+
 ### Massive.io alt-data 통합
 
 ```bash
