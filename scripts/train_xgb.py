@@ -68,6 +68,9 @@ def main():
                     help="path to save the failure-insight text report")
     ap.add_argument("--insight-class", default="FP",
                     help="mistake class to analyze (FP, FN)")
+    ap.add_argument("--max-train-size", type=int, default=None,
+                    help="sliding window 크기 (None=누적식, 정수=고정식). "
+                         "대규모 학습이면 504~1260 권장")
     args = ap.parse_args()
 
     cfg = BotConfig(

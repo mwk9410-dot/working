@@ -57,6 +57,7 @@ def train_xgb_walkforward(
     n_splits: int = 5,
     embargo: int = 20,
     min_train: int = 200,
+    max_train_size: int | None = None,
     xgb_params: Optional[Dict] = None,
     threshold: float = 0.5,
 ) -> TrainResult:
@@ -79,7 +80,12 @@ def train_xgb_walkforward(
     )
     params = {**default_params, **(xgb_params or {})}
 
-    splitter = EmbargoedWalkForward(n_splits=n_splits, embargo=embargo, min_train=min_train)
+    splitter = EmbargoedWalkForward(
+        n_splits=n_splits,
+        embargo=embargo,
+        min_train=min_train,
+        max_train_size=max_train_size,
+    )
     n_rows = len(X)
     X_arr = X.to_numpy()
     y_arr = y.to_numpy()
@@ -123,6 +129,7 @@ def train_xgb_rolling(
     embargo: int = 20,
     step: int = 1,
     refit_every: int = 5,
+    max_train_size: int | None = None,
     xgb_params: Optional[Dict] = None,
     threshold: float = 0.5,
     verbose: bool = False,
@@ -166,7 +173,11 @@ def train_xgb_rolling(
     current_model = None
     last_refit = -refit_every
     splitter = DailyRollingWalkForward(
-        min_train=min_train, embargo=embargo, step=step, test_window=1
+        min_train=min_train,
+        embargo=embargo,
+        step=step,
+        test_window=1,
+        max_train_size=max_train_size,
     )
 
     for train_idx, test_idx in splitter.split(n_rows):

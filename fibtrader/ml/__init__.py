@@ -5,6 +5,7 @@ from .train import train_xgb_walkforward, train_xgb_rolling, TrainResult
 from .explain import shap_importance
 from .notebook import build_failure_notebook, cluster_failures
 from .insight import generate_failure_insights
+from .pooled import build_pooled_frame
 from .rules import (
     CandidateRule,
     RuleStats,
@@ -29,6 +30,7 @@ __all__ = [
     "build_failure_notebook",
     "cluster_failures",
     "generate_failure_insights",
+    "build_pooled_frame",
     "CandidateRule",
     "RuleStats",
     "propose_rules",

@@ -54,6 +54,40 @@ python scripts/train_xgb.py path/to/ohlcv.csv \
 기본 비용은 한국 리테일의 미국주식 매매 (∼25bps/측)에 맞춰져 있습니다.
 미국 리테일 $0 commission 환경이면 `--fee-bps 0`.
 
+### 풀드(pooled) 학습 — 여러 종목 합쳐서 한 모델
+
+대규모 데이터(예: 6500종목)에서 종목별로 학습하는 대신 모든 종목을 시간순으로
+합쳐 단일 모델을 학습. 종목당 데이터가 적을수록 풀드가 통계적으로 우수하고,
+시간도 종목별의 1/수백 수준.
+
+```bash
+python scripts/train_pooled.py --dir corpus/ \
+    --max-train-size 504 \
+    --n-splits 5 \
+    --min-train 2520 \
+    --hold-bars 20 --min-conf 3 \
+    --fee-bps 25 --slippage-bps 5 \
+    --model-out pooled_model.json \
+    --oof-out pooled_oof.csv \
+    --notebook-out pooled_notebook.csv \
+    --insight-out pooled_insight.txt
+```
+
+- `--max-train-size 504` — sliding window 약 2년 (학습 시간 균일, regime 변화 반영)
+- `--min-train 2520` — 첫 fold 시작 전 최소 누적할 행 수
+- 종목별 식별을 위해 `Ticker` 컬럼이 자동 추가됨 (학습에는 들어가지 않음)
+
+### Sliding window — 학습 구간 크기 고정
+
+기존 walk-forward 는 누적식(학습 구간이 fold 진행할수록 커짐) 이라 후반 fold
+학습이 매우 느림. `--max-train-size` 를 주면 학습 구간 크기가 고정되어 시간
+부담이 fold 마다 동일.
+
+```bash
+# 기존 단일 종목 학습에도 sliding 적용
+python scripts/train_xgb.py ohlcv.csv --max-train-size 504
+```
+
 ### Rolling daily walk-forward (D 학습 → D+gap 검증)
 
 매 bar마다 학습-예측을 전진시키는 모드. `--refit-every`로 재학습 비용을 조절

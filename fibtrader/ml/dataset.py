@@ -9,10 +9,11 @@ from typing import List, Tuple
 import numpy as np
 import pandas as pd
 
-# Columns that must NEVER enter X (leakage or non-feature data)
+# 절대 X 에 들어가면 안 되는 컬럼들 (누수 또는 비-feature 데이터)
 FEATURE_BLOCKLIST = {
     "Date",
-    "Open", "High", "Low", "Close", "Volume",       # raw OHLCV (derived features are fine)
+    "Ticker",                                       # 풀드 학습 시 종목명 — 학습에 쓰면 누수
+    "Open", "High", "Low", "Close", "Volume",       # 원본 OHLCV (파생 feature 는 OK)
     "index",
     "pivot", "pivot_confirmed_at",
     "swing_low", "swing_high",
