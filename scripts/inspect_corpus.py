@@ -20,8 +20,12 @@ import os
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import numpy as np
 import pandas as pd
+
+from fibtrader.paths import corpus_dir
 
 
 def _peek_csv(path: Path, n_head: int = 2, n_tail: int = 2):
@@ -51,13 +55,15 @@ def _find_datetime_col(df: pd.DataFrame) -> str | None:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("directory", help="분봉 CSV 들이 있는 폴더")
+    ap.add_argument("directory", nargs="?", default=None,
+                    help="분봉 CSV 폴더. 미지정 시 FIBTRADER_CORPUS_DIR 환경변수 사용")
     ap.add_argument("--sample", type=int, default=200,
-                    help="기간 분포 분석에 사용할 표본 종목 수 (모든 파일 다 열기엔 느림)")
+                    help="기간 분포 분석에 사용할 표본 종목 수")
     ap.add_argument("--out", default=None, help="결과를 이 파일에 저장")
     args = ap.parse_args()
 
-    d = Path(args.directory)
+    d = Path(args.directory) if args.directory else corpus_dir()
+    print(f"corpus 폴더: {d}")
     if not d.exists():
         print(f"폴더 없음: {d}")
         sys.exit(1)

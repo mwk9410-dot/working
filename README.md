@@ -21,6 +21,20 @@ scripts/           run_backtest.py, run_permutation.py
 tests/             pytest 기반 단위 테스트 (합성 OHLCV 사용)
 ```
 
+## 데이터 위치 — 코드와 분리
+
+데이터(분봉 20GB 등 대용량)는 절대 리포에 두지 않는다. 환경 변수로 경로 주입:
+
+```bash
+cp .env.example .env
+# .env 열어서 본인 머신의 절대 경로 입력
+# FIBTRADER_CORPUS_DIR=C:\Users\me\data\1m_massive
+# FIBTRADER_ARTIFACTS_DIR=C:\Users\me\data\artifacts
+```
+
+이후 모든 CLI 가 `--dir` 인자를 생략하면 `FIBTRADER_CORPUS_DIR` 를 자동 사용.
+산출물(모델/oof/notebook)도 `FIBTRADER_ARTIFACTS_DIR` 에 자동 저장.
+
 ## 빠른 실행
 
 ```bash

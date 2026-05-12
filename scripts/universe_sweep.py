@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pandas as pd
 
 from fibtrader import BotConfig
+from fibtrader.paths import artifacts_dir, corpus_dir
 from fibtrader.universe import (
     FilterSpec,
     backtest_corpus,
@@ -32,9 +33,9 @@ from fibtrader.universe import (
 
 def main():
     ap = argparse.ArgumentParser()
-    g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--dir", help="directory of {ticker}.csv files")
-    g.add_argument("--long", help="long-format CSV with Ticker column")
+    g = ap.add_mutually_exclusive_group()
+    g.add_argument("--dir", help="{ticker}.csv 폴더. 미지정 시 FIBTRADER_CORPUS_DIR 환경변수 사용")
+    g.add_argument("--long", help="'Ticker' 컬럼이 있는 long format CSV")
 
     ap.add_argument("--max-tickers", type=int, default=None)
     ap.add_argument("--zigzag-pct", type=float, default=0.05)
@@ -45,20 +46,23 @@ def main():
     ap.add_argument("--metric", default="sharpe_like",
                     choices=["sharpe_like", "avg_ret", "cum_return", "win_rate", "profit_factor"])
     ap.add_argument("--workers", type=int, default=1)
-    ap.add_argument("--sweep-out", default="sweep.csv")
-    ap.add_argument("--backtest-out", default="backtest.csv")
-    ap.add_argument("--stats-out", default="stats.csv")
+    _art = artifacts_dir()
+    ap.add_argument("--sweep-out", default=str(_art / "sweep.csv"))
+    ap.add_argument("--backtest-out", default=str(_art / "backtest.csv"))
+    ap.add_argument("--stats-out", default=str(_art / "stats.csv"))
     args = ap.parse_args()
 
-    print("Loading corpus...")
-    if args.dir:
-        corpus = load_corpus_dir(args.dir, max_tickers=args.max_tickers)
-    else:
+    print("corpus 로딩...")
+    if args.long:
         corpus = load_corpus_long(args.long)
         if args.max_tickers is not None:
             keys = list(corpus.keys())[: args.max_tickers]
             corpus = {k: corpus[k] for k in keys}
-    print(f"Loaded {len(corpus)} tickers")
+    else:
+        src = Path(args.dir) if args.dir else corpus_dir()
+        print(f"  corpus 폴더: {src}")
+        corpus = load_corpus_dir(src, max_tickers=args.max_tickers)
+    print(f"로드된 종목: {len(corpus)}개")
 
     cfg = BotConfig(
         zigzag_pct=args.zigzag_pct,

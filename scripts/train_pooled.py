@@ -37,13 +37,15 @@ from fibtrader.ml import (
     shap_importance,
     train_xgb_walkforward,
 )
+from fibtrader.paths import artifacts_dir, corpus_dir
 from fibtrader.universe import load_corpus_dir, load_corpus_long
 
 
 def main():
     ap = argparse.ArgumentParser()
-    g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--dir", help="{ticker}.csv 들이 든 디렉토리")
+    g = ap.add_mutually_exclusive_group()
+    g.add_argument("--dir", help="{ticker}.csv 들이 든 디렉토리. "
+                                  "미지정 시 FIBTRADER_CORPUS_DIR 환경변수 사용")
     g.add_argument("--long", help="'Ticker' 컬럼이 있는 long format CSV")
 
     ap.add_argument("--max-tickers", type=int, default=None,
@@ -71,13 +73,14 @@ def main():
     ap.add_argument("--n-estimators", type=int, default=400)
     ap.add_argument("--max-depth", type=int, default=4)
 
-    # 출력
+    # 출력 — 기본은 FIBTRADER_ARTIFACTS_DIR (없으면 ./data/artifacts)
+    _art = artifacts_dir()
     ap.add_argument("--pooled-out", default=None,
                     help="합쳐진 feature+label DataFrame parquet 저장 (선택)")
-    ap.add_argument("--model-out", default="pooled_model.json")
-    ap.add_argument("--oof-out", default="pooled_oof.csv")
-    ap.add_argument("--shap-out", default="pooled_shap.csv")
-    ap.add_argument("--importance-out", default="pooled_importance.csv")
+    ap.add_argument("--model-out", default=str(_art / "pooled_model.json"))
+    ap.add_argument("--oof-out", default=str(_art / "pooled_oof.csv"))
+    ap.add_argument("--shap-out", default=str(_art / "pooled_shap.csv"))
+    ap.add_argument("--importance-out", default=str(_art / "pooled_importance.csv"))
     ap.add_argument("--notebook-out", default=None)
     ap.add_argument("--insight-out", default=None)
     ap.add_argument("--cluster-failures", type=int, default=0)
@@ -87,13 +90,15 @@ def main():
     args = ap.parse_args()
 
     print("=== 1) 종목 corpus 로딩 ===")
-    if args.dir:
-        corpus = load_corpus_dir(args.dir, max_tickers=args.max_tickers)
-    else:
+    if args.long:
         corpus = load_corpus_long(args.long)
         if args.max_tickers is not None:
             keys = list(corpus.keys())[: args.max_tickers]
             corpus = {k: corpus[k] for k in keys}
+    else:
+        src = Path(args.dir) if args.dir else corpus_dir()
+        print(f"  corpus 폴더: {src}")
+        corpus = load_corpus_dir(src, max_tickers=args.max_tickers)
     print(f"로드된 종목: {len(corpus)}개")
 
     cfg = BotConfig(

@@ -6,3 +6,41 @@ __pycache__/
 venv/
 *.egg-info/
 .DS_Store
+
+# 환경별 설정 (사용자 로컬 경로)
+.env
+.env.local
+
+# 데이터 / 학습 산출물 폴더 — 절대 커밋 금지
+data/
+artifacts/
+corpus/
+
+# 학습 산출물 파일 (이름 패턴)
+*.parquet
+*.feather
+*.h5
+*.bin
+*.model
+*.joblib
+*.pkl
+*.pickle
+
+# 명시적인 산출물 파일명
+oof.csv
+*_oof.csv
+notebook.csv
+*_notebook.csv
+shap.csv
+*_shap.csv
+importance.csv
+*_importance.csv
+model.json
+*_model.json
+rules_*.json
+sweep.csv
+backtest.csv
+stats.csv
+report.txt
+insight.txt
+*_insight.txt
