@@ -39,6 +39,32 @@ pytest -q
 - `atr_pct_min/max`: 변동성 regime 필터 재조정.
 - 외부에서 거래대금/스프레드/호가 imbalance 필터를 사전 적용한 후 `signal.LiveSignalGenerator`에 공급.
 
+## ML 학습 (XGBoost + SHAP)
+
+라벨은 백테스트 메커니즘과 동일한 **triple-barrier** (López de Prado).
+CV는 **embargoed walk-forward** — overlapping forward window 누수 차단.
+
+```bash
+python scripts/train_xgb.py path/to/ohlcv.csv \
+    --hold-bars 20 --stop-atr 1.5 --take-atr 2.5 \
+    --fee-bps 25 --slippage-bps 5 \
+    --model-out model.json --shap-out shap.csv --oof-out oof.csv
+```
+
+기본 비용은 한국 리테일의 미국주식 매매 (∼25bps/측)에 맞춰져 있습니다.
+미국 리테일 $0 commission 환경이면 `--fee-bps 0`.
+
+### Massive.io alt-data 통합
+
+```bash
+python scripts/train_xgb.py ohlcv.csv \
+    --altdata-csv massive_export.csv --altdata-ticker AAPL
+```
+
+`MassiveCSVAdapter`는 long format (`Date,Ticker,metric,value`) 또는 wide
+format을 수용하고, 출판 지연 (`release_lag_bdays`, 기본 1영업일)을 자동 보정한 후
+`alt_*` prefix로 feature를 추가합니다.
+
 ## 라이브 모드 골격
 
 ```python

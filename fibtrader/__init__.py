@@ -17,3 +17,6 @@ __all__ = [
     "permutation_test_random_ratios",
     "LiveSignalGenerator",
 ]
+
+# Subpackages are imported lazily — they pull heavy deps (xgboost, shap).
+
